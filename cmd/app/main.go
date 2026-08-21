@@ -3,12 +3,17 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"task_manager/internal/handler"
 	"task_manager/internal/middleware"
 	"task_manager/internal/repository"
 	"task_manager/internal/service"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/redis/go-redis/v9"
@@ -146,9 +151,31 @@ func main() {
 		Handler: mux,
 	}
 
-	log.Printf("server started on port %s", cfg.HTTPPort)
+	go func() {
+		log.Printf("server started on port %s", cfg.HTTPPort)
 
-	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		log.Fatal(err)
+		if err := server.ListenAndServe(); err != nil &&
+			!errors.Is(err, http.ErrServerClosed) {
+			log.Printf("server error: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+
+	<-quit
+
+	log.Println("shutting down server")
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		log.Printf("server shutdown: %v", err)
 	}
+
+	log.Println("server stopped")
 }
