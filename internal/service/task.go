@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"strings"
 	"task_manager/internal/model"
 	"time"
@@ -130,7 +131,7 @@ func (s *TaskService) GetAll(ctx context.Context, userID int64, filter model.Tas
 	}
 
 	if err := s.taskCache.Set(ctx, filter, tasks); err != nil {
-		// кеш не должен ломать основной запрос
+		log.Printf("failed to cache tasks: %v", err)
 	}
 
 	return tasks, nil
@@ -143,6 +144,9 @@ func (s *TaskService) Update(ctx context.Context, taskID int64, userID int64, in
 	}
 	if task == nil {
 		return ErrTaskNotFound
+	}
+	if input.Version != task.Version {
+		return ErrVersionConflict
 	}
 
 	role, err := s.teamRepo.GetMemberRole(ctx, task.TeamID, userID)

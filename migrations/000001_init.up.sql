@@ -1,8 +1,8 @@
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(225) NOT NULL UNIQUE,
-    password_hash VARCHAR(225) NOT NULL,
-    name VARCHAR(225) NOT NULL,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    name VARCHAR(255) NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -27,7 +27,7 @@ CREATE TABLE tasks (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     team_id BIGINT NOT NULL,
     title VARCHAR(255) NOT NULL,
-    description TEXT,
+    description TEXT NOT NULL,
     status VARCHAR(32) NOT NULL,
     created_by BIGINT NOT NULL,
     assignee_id BIGINT,
@@ -60,17 +60,9 @@ CREATE TABLE task_comments (
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
-CREATE INDEX idx_tasks_team_id
-ON tasks(team_id);
 
 CREATE INDEX idx_tasks_team_status
 ON tasks(team_id, status);
 
 CREATE INDEX idx_tasks_team_assignee
 ON tasks(team_id, assignee_id);
-
-CREATE INDEX idx_task_history_task_id
-ON task_history(task_id);
-
-CREATE INDEX idx_task_comment_task_id
-ON task_comments(task_id);

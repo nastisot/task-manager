@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"task_manager/internal/service"
@@ -26,14 +27,19 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 		authHeader := r.Header.Get("Authorization")
 
 		if authHeader == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(
+				w,
+				http.StatusUnauthorized,
+				"unauthorized",
+				"unauthorized",
+			)
 			return
 		}
 
 		const prefix = "Bearer "
 
 		if !strings.HasPrefix(authHeader, prefix) {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized", "unauthorized")
 			return
 		}
 
@@ -41,7 +47,7 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		claims, err := m.jwtManager.Validate(tokenString)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			writeJSONError(w, http.StatusUnauthorized, "unauthorized", "unauthorized")
 			return
 		}
 
@@ -54,4 +60,19 @@ func (m *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 func UserIDFromContext(ctx context.Context) (int64, bool) {
 	userID, ok := ctx.Value(userIDKey).(int64)
 	return userID, ok
+}
+
+type errorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
+
+func writeJSONError(w http.ResponseWriter, status int, code string, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	_ = json.NewEncoder(w).Encode(errorResponse{
+		Error:   code,
+		Message: message,
+	})
 }
